@@ -165,23 +165,32 @@ function glowLoop() {
       if (!px || isNaN(px[0])) return;
       const x = px[0], y = px[1];
       const ratio = d.v / maxV;
-      const r = 8 + ratio * 42;  // 8~50 半径
-      const breathe = 0.5 + 0.5 * Math.sin(glowT * 2.5 + d.lat * 0.3); // 呼吸
-      const alpha = (0.15 + ratio * 0.35) * breathe;
-      // 外圈辉光
-      const grd = ctx.createRadialGradient(x, y, r*0.2, x, y, r);
-      grd.addColorStop(0, `rgba(245,230,200,${alpha})`);
-      grd.addColorStop(0.4, `rgba(212,168,83,${alpha*0.7})`);
-      grd.addColorStop(0.8, 'rgba(212,168,83,0.02)');
-      grd.addColorStop(1, 'rgba(212,168,83,0)');
+      const r = 6 + ratio * 35;
+      const breathe = 0.4 + 0.6 * Math.sin(glowT * 2.5 + d.lat * 0.3 + d.lon * 0.2);
+      const a = (0.12 + ratio * 0.4) * breathe;
+
+      let ic, mc, cc;
+      if (ratio < 0.3) {
+        ic = [120,180,255]; mc = [80,140,220]; cc = [180,220,255];
+      } else if (ratio < 0.7) {
+        ic = [245,210,150]; mc = [212,168,83]; cc = [255,240,200];
+      } else {
+        ic = [255,200,100]; mc = [240,160,40]; cc = [255,245,200];
+      }
+
+      const grd = ctx.createRadialGradient(x, y, r*0.15, x, y, r);
+      grd.addColorStop(0, `rgba(${ic[0]},${ic[1]},${ic[2]},${a})`);
+      grd.addColorStop(0.5, `rgba(${mc[0]},${mc[1]},${mc[2]},${a*0.7})`);
+      grd.addColorStop(0.85, `rgba(${mc[0]},${mc[1]},${mc[2]},0.03)`);
+      grd.addColorStop(1, 'rgba(0,0,0,0)');
       ctx.beginPath(); ctx.arc(x, y, r, 0, Math.PI*2);
       ctx.fillStyle = grd; ctx.fill();
-      // 核心亮斑
-      const cr = r * 0.15;
+
+      const cr = r * 0.12;
       const cg = ctx.createRadialGradient(x, y, 0, x, y, cr);
-      cg.addColorStop(0, `rgba(255,245,220,${alpha*1.2})`);
-      cg.addColorStop(0.5, `rgba(245,230,200,${alpha*0.6})`);
-      cg.addColorStop(1, 'rgba(212,168,83,0)');
+      cg.addColorStop(0, `rgba(${cc[0]},${cc[1]},${cc[2]},${a*1.2})`);
+      cg.addColorStop(0.6, `rgba(${cc[0]},${cc[1]},${cc[2]},${a*0.5})`);
+      cg.addColorStop(1, 'rgba(0,0,0,0)');
       ctx.beginPath(); ctx.arc(x, y, cr, 0, Math.PI*2);
       ctx.fillStyle = cg; ctx.fill();
     } catch {}
