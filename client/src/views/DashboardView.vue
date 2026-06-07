@@ -15,6 +15,7 @@
         <button v-if="drillCode" class="btn btn-outline btn-sm" style="margin-left:12px" @click="backUp">返回上级</button>
       </div>
       <div ref="mapDom" class="map-box"></div>
+      <canvas ref="glowCanvas" class="glow-canvas"></canvas>
       <div v-if="mapLoading" class="chart-loading">加载地图中...</div>
     </div>
 
@@ -37,9 +38,10 @@ import { ref, computed, onMounted, onUnmounted, nextTick } from 'vue';
 import * as echarts from 'echarts';
 import api from '../api/index.js';
 
-const overview=ref({}),regions=ref({}),records=ref([]),mapDom=ref(null),barDom=ref(null),mapLoading=ref(false);
+const overview=ref({}),regions=ref({}),records=ref([]),mapDom=ref(null),barDom=ref(null),mapLoading=ref(false),gCvs=ref(null);
 const drillCode=ref(''),drillTitle=ref('全国城市 IP 访问热力分布');
 let mapInst=null,barInst=null,nationalGeo=null,geoCache={};
+let grAF=null,gData=[];
 
 const cards=computed(()=>{const o=overview.value||{},r=regions.value||{};return[
   {value:o.totalVisits??'—',label:'总访问次数',sub:`近7日 ${o.weekVisits??0} 次`,cls:'accent'},
@@ -95,6 +97,8 @@ function drawCharts(mapName){
     geo:{map:mapName,zoom:isNation?1.15:2.5,roam:true,center:isNation?[104.5,36]:undefined,label:{show:false},emphasis:{label:{color:'#8B6914',fontSize:12,fontWeight:'bold',show:true},itemStyle:{areaColor:'#f5e6c8'}},itemStyle:{areaColor:'#0d1117',borderColor:'#2a3345',borderWidth:isNation?0.5:0.8}},
     series:[{name:'访问次数',type:'map',map:mapName,geoIndex:0,data:mapData}],
   });
+  currentMapName = mapName;
+  setTimeout(glowRefresh, 500);
 
   // 点击下钻
   const cGeo=isNation?nationalGeo:geoCache[mapName];
@@ -113,12 +117,82 @@ function drawCharts(mapName){
     series:[{type:'bar',data:top10.map(i=>i.value).reverse(),itemStyle:{borderRadius:[0,6,6,0],color:new echarts.graphic.LinearGradient(0,0,1,0,[{offset:0,color:'#c9a84c'},{offset:1,color:'#3b5e7a'}])},barWidth:'55%',label:{show:true,position:'right',color:'#c9cdd4',fontSize:12,fontWeight:700}}],
   });
 }
-function onResize(){if(mapInst)mapInst.resize();if(barInst)barInst.resize()}
+function onResize(){if(mapInst)mapInst.resize();if(barInst)barInst.resize();glowRefresh()}
 
-onMounted(async()=>{try{const[ov,reg]=await Promise.all([api.get('/api/v1/statistics/overview'),api.get('/api/v1/statistics/user-regions')]);overview.value=ov.data;regions.value=reg.data;records.value=(reg.data.recentRecords||[]).slice(0,10);await loadNational();await nextTick();drawCharts('china_city')}catch(e){console.error(e)}window.addEventListener('resize',onResize)});
-onUnmounted(()=>{window.removeEventListener('resize',onResize);if(mapInst)mapInst.dispose();if(barInst)barInst.dispose()});
+// ===== 粒子发光效果 =====
+function glowRefresh() {
+  if (!mapInst || !gCvs.value) return;
+  const geo = isNation ? nationalGeo : geoCache[currentMapName];
+  if (!geo) return;
+  const raw = regions.value?.provinces || [];
+  // 读 GeoJSON 里的中心坐标
+  const pts = [];
+  geo.features.forEach(f => {
+    const cp = f.properties?.cp || f.properties?.center;
+    if (!cp || cp.length < 2) return;
+    const match = raw.find(p => {
+      const nm = f.properties.name;
+      return p.name === nm || p.name === nm.replace(/市|区|县$/,'') || nm === p.name+'市' || nm === p.name+'区' || nm === p.name+'县';
+    });
+    if (match) pts.push({ lon: cp[0], lat: cp[1], v: match.value });
+  });
+  gData = pts;
+  if (!grAF) glowLoop();
+}
+let glowT = 0;
+function glowLoop() {
+  const cv = gCvs.value; if (!cv || !mapInst) return;
+  const mapEl = mapDom.value; if (!mapEl) return;
+  const rect = mapEl.getBoundingClientRect();
+  cv.width = rect.width * window.devicePixelRatio;
+  cv.height = rect.height * window.devicePixelRatio;
+  cv.style.width = rect.width + 'px';
+  cv.style.height = rect.height + 'px';
+  const ctx = cv.getContext('2d');
+  ctx.setTransform(window.devicePixelRatio, 0, 0, window.devicePixelRatio, 0, 0);
+  ctx.clearRect(0, 0, rect.width, rect.height);
+
+  const isNation = !drillCode.value;
+  const maxV = Math.max(...gData.map(d => d.v), 1);
+  glowT += 0.03;
+  gData.forEach(d => {
+    try {
+      const px = mapInst.convertToPixel({geoIndex:0}, [d.lon, d.lat]);
+      if (!px || isNaN(px[0])) return;
+      const x = px[0], y = px[1];
+      const ratio = d.v / maxV;
+      const r = 8 + ratio * 42;  // 8~50 半径
+      const breathe = 0.5 + 0.5 * Math.sin(glowT * 2.5 + d.lat * 0.3); // 呼吸
+      const alpha = (0.15 + ratio * 0.35) * breathe;
+      // 外圈辉光
+      const grd = ctx.createRadialGradient(x, y, r*0.2, x, y, r);
+      grd.addColorStop(0, `rgba(245,230,200,${alpha})`);
+      grd.addColorStop(0.4, `rgba(212,168,83,${alpha*0.7})`);
+      grd.addColorStop(0.8, 'rgba(212,168,83,0.02)');
+      grd.addColorStop(1, 'rgba(212,168,83,0)');
+      ctx.beginPath(); ctx.arc(x, y, r, 0, Math.PI*2);
+      ctx.fillStyle = grd; ctx.fill();
+      // 核心亮斑
+      const cr = r * 0.15;
+      const cg = ctx.createRadialGradient(x, y, 0, x, y, cr);
+      cg.addColorStop(0, `rgba(255,245,220,${alpha*1.2})`);
+      cg.addColorStop(0.5, `rgba(245,230,200,${alpha*0.6})`);
+      cg.addColorStop(1, 'rgba(212,168,83,0)');
+      ctx.beginPath(); ctx.arc(x, y, cr, 0, Math.PI*2);
+      ctx.fillStyle = cg; ctx.fill();
+    } catch {}
+  });
+  grAF = requestAnimationFrame(glowLoop);
+}
+function startGlow() { if (!grAF) { glowT = 0; glowLoop(); } }
+function stopGlow() { if (grAF) { cancelAnimationFrame(grAF); grAF = null; } }
+let currentMapName = 'china_city';
+
+onMounted(async()=>{try{const[ov,reg]=await Promise.all([api.get('/api/v1/statistics/overview'),api.get('/api/v1/statistics/user-regions')]);overview.value=ov.data;regions.value=reg.data;records.value=(reg.data.recentRecords||[]).slice(0,10);await loadNational();await nextTick();currentMapName='china_city';drawCharts('china_city');setTimeout(glowRefresh, 600)}catch(e){console.error(e)}window.addEventListener('resize',onResize)});
+onUnmounted(()=>{window.removeEventListener('resize',onResize);if(mapInst)mapInst.dispose();if(barInst)barInst.dispose();stopGlow()});
 </script>
 
 <style scoped>
 .map-box{width:100%;height:580px}.bar-box{width:100%;height:420px}.chart-loading{text-align:center;padding:60px;color:var(--muted);font-size:14px}.charts-row{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+.map-wrap{position:relative}.glow-canvas{position:absolute;top:0;left:0;width:100%;height:100%;pointer-events:none;z-index:5}
 </style>
