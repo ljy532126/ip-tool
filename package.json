@@ -1,0 +1,17 @@
+{
+  "name": "ip-tool",
+  "version": "1.0.0",
+  "description": "加密跳转链接生成 & 访问日志记录工具",
+  "private": true,
+  "main": "app.js",
+  "scripts": {
+    "start": "node app.js",
+    "docker:up": "docker-compose up -d --build",
+    "docker:down": "docker-compose down"
+  },
+  "dependencies": {
+    "axios": "^1.6.0",
+    "express": "^4.18.2"
+  },
+  "license": "MIT"
+}

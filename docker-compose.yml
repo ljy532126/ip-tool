@@ -1,0 +1,11 @@
+version: '3'
+services:
+  ip-tool:
+    build: .
+    restart: always
+    ports:
+      - "6262:6262"
+    volumes:
+      - ./visits.json:/app/visits.json
+    environment:
+      - TZ=Asia/Shanghai
