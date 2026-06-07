@@ -33,7 +33,8 @@
 
 <script setup>
 import { ref, nextTick, onMounted, onBeforeUnmount } from 'vue';
-import { Chart } from 'chart.js';
+import { Chart, DoughnutController, ArcElement, Tooltip, Legend } from 'chart.js';
+Chart.register(DoughnutController, ArcElement, Tooltip, Legend);
 import * as echarts from 'echarts';
 import api from '../api/index.js';
 
