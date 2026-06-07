@@ -124,6 +124,8 @@ router.get('/user-regions', async (req, res) => {
       city: r.geoInfo?.city || '',
       district: r.geoInfo?.district || '',
       isp: r.geoInfo?.isp || '',
+      latitude: r.geoInfo?.latitude || 0,
+      longitude: r.geoInfo?.longitude || 0,
     }));
 
     res.json({

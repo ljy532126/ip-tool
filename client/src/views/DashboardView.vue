@@ -26,8 +26,8 @@
       <div class="card">
         <div class="card-title">最近访问记录</div>
         <div class="table-wrap" v-if="records.length">
-          <table><thead><tr><th>IP</th><th>省份/城市/区县</th><th>运营商</th><th>时间</th></tr></thead>
-          <tbody><tr v-for="r in records" :key="r.ip+r.createdAt"><td class="mono">{{esc(r.ip)}}</td><td>{{ locationText(r) }}</td><td>{{esc(r.isp)}}</td><td>{{fmt(r.createdAt)}}</td></tr></tbody></table>
+          <table><thead><tr><th>IP</th><th>省份/城市/区县</th><th>经纬度</th><th>运营商</th><th>时间</th></tr></thead>
+          <tbody><tr v-for="r in records" :key="r.ip+r.createdAt"><td class="mono">{{esc(r.ip)}}</td><td>{{ locationText(r) }}</td><td class="mono">{{r.latitude?.toFixed(4) || '—'}}, {{r.longitude?.toFixed(4) || '—'}}</td><td>{{esc(r.isp)}}</td><td>{{fmt(r.createdAt)}}</td></tr></tbody></table>
         </div>
         <div v-else class="empty"><p>暂无访问记录</p></div>
       </div>
