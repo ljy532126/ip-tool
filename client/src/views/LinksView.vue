@@ -61,14 +61,13 @@ function fmt(d){if(!d)return'—';try{return new Date(d).toLocaleString('zh-CN',
 function cp(t){navigator.clipboard.writeText(t).then(()=>toast('已复制')).catch(()=>toast('复制失败','error'))}
 function loc(k){return `${location.protocol}//${location.host}/r/${k}`}
 
+async function fetch(p=1){page.value=p;try{const r=await api.get(`/api/v1/links?page=${p}&pageSize=15`);list.value=r.data.list;total.value=r.data.total;totalPages.value=r.data.totalPages}catch{}}
 async function refresh(){refreshing.value=true;await fetch(1);refreshing.value=false}
 async function create(){const u=newUrl.value.trim();if(!u)return toast('请输入URL','error');creating.value=true;try{const r=await api.post('/api/v1/links',{targetUrl:u});createdUrl.value=r.data.redirectUrl;newUrl.value='';toast('链接已生成');fetch(page.value)}catch(e){toast(e.message,'error')}finally{creating.value=false}}
 async function del(id){if(!confirm('确定删除？不可恢复。'))return;try{await api.del(`/api/v1/links/${id}`);toast('已删除');fetch(page.value)}catch(e){toast(e.message,'error')}}
 async function openVisits(l){modal.value=true;modalKey.value=l.key;modalId.value=l._id;await loadVisits(1)}
 async function loadVisits(p=vPage.value){vPage.value=p;try{const r=await api.get(`/api/v1/links/${modalId.value}/visits?page=${p}&pageSize=15`);visits.value=r.data.list;vTotalPages.value=r.data.totalPages}catch{}}
 
-async function fetch(p=1){page.value=p;try{const r=await api.get(`/api/v1/links?page=${p}&pageSize=15`);list.value=r.data.list;total.value=r.data.total;totalPages.value=r.data.totalPages}catch{}}
-async function refresh(){refreshing.value=true;await fetch(1);refreshing.value=false}
 async function openMap(l) { router.push(`/links/${l._id}`); }
 </script>
 
