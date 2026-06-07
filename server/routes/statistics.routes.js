@@ -86,7 +86,7 @@ router.get('/user-regions', async (req, res) => {
       users.forEach(u => { userMap[String(u._id)] = u.username; });
     }
 
-    // 按 区县/城市 聚合（优先区县级）
+    // 按城市聚合（地图用城市级 GeoJSON，用 city 字段匹配）
     const cityCount = {};
     const cityLogs = await VisitLog.find(
       { ...baseFilter, $or: [{ 'geoInfo.city': { $ne: '' } }, { 'geoInfo.district': { $ne: '' } }] },
@@ -95,7 +95,8 @@ router.get('/user-regions', async (req, res) => {
 
     cityLogs.forEach(l => {
       const g = l.geoInfo || {};
-      const key = (g.district && g.district.trim()) || (g.city && g.city.trim());
+      // 优先用城市名匹配 GeoJSON，区县信息只用于表格
+      const key = g.city?.trim() || g.district?.trim();
       if (key) cityCount[key] = (cityCount[key] || 0) + 1;
     });
 
