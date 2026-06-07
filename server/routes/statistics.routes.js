@@ -86,8 +86,9 @@ router.get('/user-regions', async (req, res) => {
       users.forEach(u => { userMap[String(u._id)] = u.username; });
     }
 
-    // 按城市聚合（地图用城市级 GeoJSON，用 city 字段匹配）
+    // 按城市聚合（用于全国和省视图）
     const cityCount = {};
+    const districtCount = {};
     const cityLogs = await VisitLog.find(
       { ...baseFilter, $or: [{ 'geoInfo.city': { $ne: '' } }, { 'geoInfo.district': { $ne: '' } }] },
       'geoInfo'
@@ -95,20 +96,27 @@ router.get('/user-regions', async (req, res) => {
 
     cityLogs.forEach(l => {
       const g = l.geoInfo || {};
-      // 优先用城市名匹配 GeoJSON，区县信息只用于表格
-      const key = g.city?.trim() || g.district?.trim();
-      if (key) cityCount[key] = (cityCount[key] || 0) + 1;
+      const c = g.city?.trim();
+      const d = g.district?.trim();
+      if (c) cityCount[c] = (cityCount[c] || 0) + 1;
+      if (d) districtCount[d] = (districtCount[d] || 0) + 1;
     });
 
-    const cities = Object.entries(cityCount)
+    const cityList = Object.entries(cityCount)
       .filter(([name]) => name && name.trim())
       .map(([name, value]) => ({ name, value }))
       .sort((a, b) => b.value - a.value);
 
-    const totalVal = cities.reduce((s, p) => s + p.value, 0) || 1;
-    cities.forEach(p => {
-      p.pct = Number((p.value / totalVal * 100).toFixed(1));
-    });
+    const districtList = Object.entries(districtCount)
+      .filter(([name]) => name && name.trim())
+      .map(([name, value]) => ({ name, value }))
+      .sort((a, b) => b.value - a.value);
+
+    // 计算 city 的占比
+    const cityTotalVal = cityList.reduce((s, p) => s + p.value, 0) || 1;
+    cityList.forEach(p => { p.pct = Number((p.value / cityTotalVal * 100).toFixed(1)); });
+    const districtTotalVal = districtList.reduce((s, p) => s + p.value, 0) || 1;
+    districtList.forEach(p => { p.pct = Number((p.value / districtTotalVal * 100).toFixed(1)); });
 
     // 境外 IP 计数：geoInfo.country 不为"中国"且不为空
     const overseasCount = await VisitLog.countDocuments({
@@ -135,9 +143,10 @@ router.get('/user-regions', async (req, res) => {
         totalIps: totalIps.length,
         todayIps: todayIps.length,
         weekIps: weekIps.length,
-        coveredProvinces: cities.length,
-        provinces: cities,
-        topProvince: cities[0] || null,
+        coveredProvinces: cityList.length,
+        provinces: cityList,           // 城市级聚合（全国/省视图用）
+        districts: districtList,       // 区县级聚合（下钻到市用）
+        topProvince: cityList[0] || null,
         overseasCount,
         recentRecords: enriched,
       },
