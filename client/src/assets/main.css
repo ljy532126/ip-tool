@@ -151,14 +151,41 @@ tr:hover td { background: var(--surface2); }
 .welcome .actions .btn-primary, .welcome .actions .btn-outline { padding: 12px 28px; font-size: 14px; }
 
 /* Responsive */
-@media (max-width: 640px) {
-  nav { padding: 0 12px; gap: 2px; }
-  nav a.nav-link { padding: 6px 10px; font-size: 12px; }
-  main { padding: 20px 12px; }
+@media (max-width: 768px) {
+  nav { padding: 0 10px; gap: 1px; overflow-x: auto; -webkit-overflow-scrolling: touch; }
+  nav a.nav-link { padding: 6px 8px; font-size: 11px; white-space: nowrap; }
+  nav .logo { font-size: 14px; }
+  nav .nav-right { margin-left: 8px; padding-left: 10px; gap: 6px; }
+  nav .nav-role { font-size: 9px; padding: 1px 6px; }
+  nav .nav-user { font-size: 11px; }
+  nav .nav-logout { font-size: 11px; }
+  main { padding: 16px 10px 40px; }
+  .section-head h2 { font-size: 15px; }
+  .section-head { margin-bottom: 12px; flex-wrap: wrap; }
+  .card { padding: 16px; margin-bottom: 14px; }
+  .card-title { font-size: 13px; margin-bottom: 12px; }
   .stats-grid { grid-template-columns: repeat(2, 1fr); gap: 10px; }
-  .stat-card { padding: 16px; }
+  .stat-card { padding: 14px; }
   .stat-value { font-size: 24px; }
+  .stat-label { font-size: 10px; }
+  .stat-sub { font-size: 10px; }
   .charts-grid { grid-template-columns: 1fr; }
+  .charts-row { grid-template-columns: 1fr !important; }
   .inline-form { flex-direction: column; }
   .inline-form input { min-width: auto; }
+  .map-box { height: 340px !important; }
+  .bar-box { height: 280px !important; }
+  .chart-box canvas { max-height: 220px; }
+  table { font-size: 12px; }
+  th, td { padding: 8px 10px; }
+  th { font-size: 10px; }
+  .mono { font-size: 11px; }
+  .btn { font-size: 12px; padding: 7px 14px; }
+  .btn-sm { padding: 4px 10px; font-size: 11px; }
+  .auth-box { margin: 40px auto 0; padding: 0 10px; }
+  .auth-card { padding: 24px 20px; }
+  .auth-card h1 { font-size: 16px; }
+  .welcome h1 { font-size: 24px; }
+  .welcome p { font-size: 14px; }
+  .pagination button { padding: 5px 10px; font-size: 12px; }
 }

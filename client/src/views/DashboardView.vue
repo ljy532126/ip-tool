@@ -121,5 +121,4 @@ onUnmounted(()=>{window.removeEventListener('resize',onResize);if(mapInst)mapIns
 
 <style scoped>
 .map-box{width:100%;height:580px}.bar-box{width:100%;height:420px}.chart-loading{text-align:center;padding:60px;color:var(--muted);font-size:14px}.charts-row{display:grid;grid-template-columns:1fr 1fr;gap:14px}
-@media(max-width:768px){.map-box{height:380px}.bar-box{height:320px}.charts-row{grid-template-columns:1fr}}
 </style>
