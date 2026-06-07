@@ -21,5 +21,6 @@ async function api(method, path, body) {
 export default {
   get: p => api('GET', p),
   post: (p, b) => api('POST', p, b),
+  put: (p, b) => api('PUT', p, b),
   del: p => api('DELETE', p),
 };
