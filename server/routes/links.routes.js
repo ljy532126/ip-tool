@@ -141,4 +141,36 @@ router.get('/:id/visits', async (req, res) => {
   }
 });
 
+/**
+ * GET /api/v1/links/:id/regions
+ * 单链接城市分布（用于热力图）
+ */
+router.get('/:id/regions', async (req, res) => {
+  try {
+    const filter = ownerFilter(req, { _id: req.params.id });
+    const link = await Link.findOne(filter);
+    if (!link) return res.status(404).json({ code: 404, message: '链接不存在' });
+
+    const visits = await VisitLog.find({ linkId: link._id }, 'geoInfo').lean();
+    const cityCount = {};
+    visits.forEach(v => {
+      const g = v.geoInfo || {};
+      const c = g.city?.trim();
+      if (c) cityCount[c] = (cityCount[c] || 0) + 1;
+    });
+    const cities = Object.entries(cityCount)
+      .map(([name, value]) => ({ name, value }))
+      .sort((a, b) => b.value - a.value);
+    const total = cities.reduce((s, c) => s + c.value, 0) || 1;
+    cities.forEach(c => { c.pct = Number((c.value / total * 100).toFixed(1)); });
+
+    res.json({
+      code: 0,
+      data: { link: { _id: link._id, key: link.key, targetUrl: link.targetUrl, visitCount: link.visitCount }, cities },
+    });
+  } catch (e) {
+    res.status(500).json({ code: 500, message: '查询失败' });
+  }
+});
+
 module.exports = router;
