@@ -8,6 +8,7 @@ import AnalyticsView from '../views/AnalyticsView.vue';
 import AdminView from '../views/AdminView.vue';
 import SettingsView from '../views/SettingsView.vue';
 import ApiDocsView from '../views/ApiDocsView.vue';
+import LinkDetailView from '../views/LinkDetailView.vue';
 
 const routes = [
   { path: '/', component: WelcomeView },
@@ -16,6 +17,7 @@ const routes = [
   { path: '/docs', component: ApiDocsView },
   { path: '/dashboard', component: DashboardView, meta: { auth: true } },
   { path: '/links', component: LinksView, meta: { auth: true } },
+  { path: '/links/:id', component: LinkDetailView, meta: { auth: true } },
   { path: '/analytics', component: AnalyticsView, meta: { auth: true } },
   { path: '/admin', component: AdminView, meta: { auth: true, admin: true } },
   { path: '/settings', component: SettingsView, meta: { auth: true, admin: true } },
