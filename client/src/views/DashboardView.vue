@@ -26,8 +26,8 @@
       <div class="card">
         <div class="card-title">最近访问记录</div>
         <div class="table-wrap" v-if="records.length">
-          <table><thead><tr><th>IP</th><th>省份/城市</th><th>运营商</th><th>时间</th></tr></thead>
-          <tbody><tr v-for="r in records" :key="r.ip+r.createdAt"><td class="mono">{{esc(r.ip)}}</td><td>{{esc(r.province)}} {{esc(r.city)}}</td><td>{{esc(r.isp)}}</td><td>{{fmt(r.createdAt)}}</td></tr></tbody></table>
+          <table><thead><tr><th>IP</th><th>省份/城市/区县</th><th>运营商</th><th>时间</th></tr></thead>
+          <tbody><tr v-for="r in records" :key="r.ip+r.createdAt"><td class="mono">{{esc(r.ip)}}</td><td>{{ locationText(r) }}</td><td>{{esc(r.isp)}}</td><td>{{fmt(r.createdAt)}}</td></tr></tbody></table>
         </div>
         <div v-else class="empty"><p>暂无访问记录</p></div>
       </div>
@@ -58,6 +58,10 @@ const cards = computed(() => {
 });
 function esc(s){return s?String(s).replace(/</g,'&lt;').replace(/>/g,'&gt;'):'—'}
 function fmt(d){if(!d)return'—';try{return new Date(d).toLocaleString('zh-CN',{year:'numeric',month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit'})}catch{return d}}
+function locationText(r) {
+  const parts = [r.province, r.city, r.district].filter(Boolean);
+  return esc(parts.join(' '));
+}
 
 const PROV_MAP = {
   '11000000':'北京市','12000000':'天津市','13000000':'河北省','14000000':'山西省','15000000':'内蒙古','21000000':'辽宁省',
@@ -79,7 +83,6 @@ async function loadNational() {
 
 // ===== 下钻 =====
 async function drillTo(code) {
-  // code: 2位=省, 4位=市
   const len = code.length;
   let url, mapKey;
   const provPrefix = code.substring(0,2);
@@ -102,7 +105,6 @@ async function drillTo(code) {
     echarts.registerMap(mapKey, geoCache[mapKey]);
     drillCode.value = code;
 
-    // 构建标题
     if (len === 2) {
       drillTitle.value = PROV_MAP[code + '000000'] || '';
     } else {
@@ -121,12 +123,10 @@ function backUp() {
   const code = drillCode.value;
   if (!code) return;
   if (code.length <= 2) {
-    // 从省视图回全国
     drillCode.value = '';
     drillTitle.value = '全国城市 IP 访问热力分布';
     drawCharts('china_city', true);
   } else {
-    // 从市视图回省
     const prov = code.substring(0, 2);
     drillTo(prov);
   }
@@ -186,17 +186,14 @@ function drawCharts(mapName, showLabel = false) {
     if (!f) return;
 
     if (currentLevel === 'nation') {
-      // 全国城市：id=330700 → 提取省代码 "33"
       if (f.id) drillTo(String(f.id).substring(0, 2));
     } else if (currentLevel === 'province') {
-      // 省份城市：无 id → 从 nationalGeo 按名称反查 adcode
       const citySearchName = params.name.replace(/市$/, '');
       const cityF = nationalGeo?.features.find(fe =>
         fe.properties.name === params.name || fe.properties.name === citySearchName
       );
       if (cityF?.id) drillTo(String(cityF.id));
     }
-    // city 级别不继续
   });
 
   // TOP10
