@@ -4,3 +4,5 @@ visits.json
 *.log
 .DS_Store
 .codegraph/
+client/dist/
+server/package-lock.json

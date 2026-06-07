@@ -1,11 +1,22 @@
-version: '3'
 services:
   ip-tool:
     build: .
     restart: always
     ports:
       - "6262:6262"
-    volumes:
-      - ./visits.json:/app/visits.json
     environment:
       - TZ=Asia/Shanghai
+      - MONGO_URI=mongodb://mongo:27017/ip-tool
+      # JWT_SECRET 生产环境请填入随机字符串（不填则每次重启自动生成，已有 token 会失效）
+      - JWT_SECRET=
+    depends_on:
+      - mongo
+
+  mongo:
+    image: mongo:7
+    restart: always
+    volumes:
+      - mongo_data:/data/db
+
+volumes:
+  mongo_data:
