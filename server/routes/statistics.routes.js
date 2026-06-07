@@ -94,11 +94,19 @@ router.get('/user-regions', async (req, res) => {
       'geoInfo'
     ).lean();
 
+    const MUNICIPALITIES = ['北京', '天津', '上海', '重庆'];
+
     cityLogs.forEach(l => {
       const g = l.geoInfo || {};
       const c = g.city?.trim();
       const d = g.district?.trim();
+      // 标准城市名计数
       if (c) cityCount[c] = (cityCount[c] || 0) + 1;
+      // 直辖市特殊处理：省级名也是城市名（上海=上海市、北京=北京市）
+      const p = g.province?.trim();
+      if (p && MUNICIPALITIES.includes(p)) {
+        cityCount[p] = (cityCount[p] || 0) + 1;
+      }
       if (d) districtCount[d] = (districtCount[d] || 0) + 1;
     });
 
