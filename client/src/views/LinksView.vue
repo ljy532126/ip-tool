@@ -11,7 +11,9 @@
     </div>
 
     <div class="card">
-      <div class="card-title">链接列表 <span style="font-weight:400;color:var(--muted);font-size:12px">共 {{ total }} 条</span></div>
+      <div class="card-title">链接列表 <span style="font-weight:400;color:var(--muted);font-size:12px">共 {{ total }} 条</span>
+        <button class="btn btn-outline btn-sm" style="margin-left:12px" :disabled="refreshing" @click="refresh">{{ refreshing ? '刷新中...' : '刷新' }}</button>
+      </div>
       <div class="table-wrap" v-if="list.length">
         <table><thead><tr><th>短链 Key</th><th>目标 URL</th><th>访问量</th><th>创建时间</th><th>操作</th></tr></thead>
         <tbody><tr v-for="l in list" :key="l._id">
@@ -51,7 +53,7 @@ import { useToast } from '../stores/toast.js';
 
 const { add: toast } = useToast();
 const router = useRouter();
-const newUrl=ref(''),createdUrl=ref(''),creating=ref(false);
+const newUrl=ref(''),createdUrl=ref(''),creating=ref(false),refreshing=ref(false);
 const list=ref([]),page=ref(1),total=ref(0),totalPages=ref(1);
 const modal=ref(false),modalKey=ref(''),modalId=ref(''),visits=ref([]),vPage=ref(1),vTotalPages=ref(1);
 function esc(s){return s?String(s).replace(/</g,'&lt;').replace(/>/g,'&gt;'):'—'}
@@ -59,12 +61,14 @@ function fmt(d){if(!d)return'—';try{return new Date(d).toLocaleString('zh-CN',
 function cp(t){navigator.clipboard.writeText(t).then(()=>toast('已复制')).catch(()=>toast('复制失败','error'))}
 function loc(k){return `${location.protocol}//${location.host}/r/${k}`}
 
-async function fetch(p=1){page.value=p;try{const r=await api.get(`/api/v1/links?page=${p}&pageSize=15`);list.value=r.data.list;total.value=r.data.total;totalPages.value=r.data.totalPages}catch{}}
+async function refresh(){refreshing.value=true;await fetch(1);refreshing.value=false}
 async function create(){const u=newUrl.value.trim();if(!u)return toast('请输入URL','error');creating.value=true;try{const r=await api.post('/api/v1/links',{targetUrl:u});createdUrl.value=r.data.redirectUrl;newUrl.value='';toast('链接已生成');fetch(page.value)}catch(e){toast(e.message,'error')}finally{creating.value=false}}
 async function del(id){if(!confirm('确定删除？不可恢复。'))return;try{await api.del(`/api/v1/links/${id}`);toast('已删除');fetch(page.value)}catch(e){toast(e.message,'error')}}
 async function openVisits(l){modal.value=true;modalKey.value=l.key;modalId.value=l._id;await loadVisits(1)}
 async function loadVisits(p=vPage.value){vPage.value=p;try{const r=await api.get(`/api/v1/links/${modalId.value}/visits?page=${p}&pageSize=15`);visits.value=r.data.list;vTotalPages.value=r.data.totalPages}catch{}}
 
+async function fetch(p=1){page.value=p;try{const r=await api.get(`/api/v1/links?page=${p}&pageSize=15`);list.value=r.data.list;total.value=r.data.total;totalPages.value=r.data.totalPages}catch{}}
+async function refresh(){refreshing.value=true;await fetch(1);refreshing.value=false}
 async function openMap(l) { router.push(`/links/${l._id}`); }
 </script>
 
