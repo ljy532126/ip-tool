@@ -14,8 +14,10 @@
         {{ drillTitle }}
         <button v-if="drillCode" class="btn btn-outline btn-sm" style="margin-left:12px" @click="backUp">返回上级</button>
       </div>
-      <div ref="mapDom" class="map-box"></div>
-      <canvas ref="glowCanvas" class="glow-canvas"></canvas>
+      <div class="map-wrap">
+        <div ref="mapDom" class="map-box"></div>
+        <canvas ref="gCvs" class="glow-canvas"></canvas>
+      </div>
       <div v-if="mapLoading" class="chart-loading">加载地图中...</div>
     </div>
 
@@ -122,7 +124,9 @@ function onResize(){if(mapInst)mapInst.resize();if(barInst)barInst.resize();glow
 // ===== 粒子发光效果 =====
 function glowRefresh() {
   if (!mapInst || !gCvs.value) return;
-  const geo = isNation ? nationalGeo : geoCache[currentMapName];
+  const curMap = currentMapName || 'china_city';
+  const isN = !drillCode.value;
+  const geo = isN ? nationalGeo : geoCache[curMap];
   if (!geo) return;
   const raw = regions.value?.provinces || [];
   // 读 GeoJSON 里的中心坐标
@@ -152,7 +156,7 @@ function glowLoop() {
   ctx.setTransform(window.devicePixelRatio, 0, 0, window.devicePixelRatio, 0, 0);
   ctx.clearRect(0, 0, rect.width, rect.height);
 
-  const isNation = !drillCode.value;
+  const isN = !drillCode.value;
   const maxV = Math.max(...gData.map(d => d.v), 1);
   glowT += 0.03;
   gData.forEach(d => {
