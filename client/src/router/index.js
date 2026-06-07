@@ -7,11 +7,13 @@ import LinksView from '../views/LinksView.vue';
 import AnalyticsView from '../views/AnalyticsView.vue';
 import AdminView from '../views/AdminView.vue';
 import SettingsView from '../views/SettingsView.vue';
+import ApiDocsView from '../views/ApiDocsView.vue';
 
 const routes = [
   { path: '/', component: WelcomeView },
   { path: '/login', component: AuthView, meta: { guest: true } },
   { path: '/register', component: AuthView, meta: { guest: true } },
+  { path: '/docs', component: ApiDocsView },
   { path: '/dashboard', component: DashboardView, meta: { auth: true } },
   { path: '/links', component: LinksView, meta: { auth: true } },
   { path: '/analytics', component: AnalyticsView, meta: { auth: true } },

@@ -6,5 +6,8 @@
       <router-link class="btn btn-primary" to="/login">登录</router-link>
       <router-link class="btn btn-outline" to="/register">注册</router-link>
     </div>
+    <p style="margin-top:32px;font-size:13px;color:var(--muted)">
+      <router-link to="/docs">查看 API 文档</router-link> — 6 组接口 · 复制即可用
+    </p>
   </div>
 </template>
