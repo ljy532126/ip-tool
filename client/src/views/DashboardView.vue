@@ -165,7 +165,7 @@ function glowLoop() {
       if (!px || isNaN(px[0])) return;
       const x = px[0], y = px[1];
       const ratio = d.v / maxV;
-      const r = 6 + ratio * 35;
+      const r = 4 + ratio * 20;  // 4~24 半径
       const breathe = 0.4 + 0.6 * Math.sin(glowT * 2.5 + d.lat * 0.3 + d.lon * 0.2);
       const a = (0.12 + ratio * 0.4) * breathe;
 
