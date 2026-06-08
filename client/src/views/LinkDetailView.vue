@@ -18,7 +18,10 @@
 
     <!-- 地图 -->
     <div class="card" style="margin-bottom:18px">
-      <div class="card-title">城市热力分布</div>
+      <div class="card-title">城市热力分布
+        <span v-if="drillProv" style="color:var(--accent);font-weight:400"> — {{ drillProv }}</span>
+        <button v-if="drillCode" class="btn btn-outline btn-sm" style="margin-left:12px" @click="backUp">返回全国</button>
+      </div>
       <div ref="mapDom" class="map-box"></div>
     </div>
 
@@ -74,7 +77,8 @@ const allVisits = ref([]);
 const records = ref([]);
 const page = ref(1), totalPages = ref(1);
 const mapDom = ref(null), barDom = ref(null);
-let mapInst = null, barInst = null, nationalGeo = null;
+const drillCode = ref(''), drillProv = ref('');
+let mapInst = null, barInst = null, nationalGeo = null, geoCache = {};
 const chartInstances = [];
 
 const uniqueIps = computed(() => new Set(allVisits.value.map(r => r.ip)).size);
@@ -135,6 +139,15 @@ function drawCharts(){
     series:[{name:'访问',type:'map',map:'link_map',geoIndex:0,data:md}],
   });
 
+  // 点击下钻
+  mapInst.off('click');
+  mapInst.on('click', p => {
+    if (drillCode.value) return; // already drilled, no further
+    if (!p.name || !nationalGeo) return;
+    const f = nationalGeo.features.find(fe => fe.properties.name === p.name);
+    if (f?.id) drillDown(String(f.id).substring(0, 2));
+  });
+
   const top10=[...cities.value].sort((a,b)=>b.value-a.value).slice(0,10);
   barInst=echarts.init(be);
   barInst.setOption({
@@ -144,6 +157,34 @@ function drawCharts(){
     yAxis:{type:'category',data:top10.map(i=>i.name).reverse(),inverse:true,axisLine:{show:false},axisTick:{show:false},axisLabel:{color:'#c9cdd4',fontSize:13,fontWeight:600}},
     series:[{type:'bar',data:top10.map(i=>i.value).reverse(),itemStyle:{borderRadius:[0,6,6,0],color:new echarts.graphic.LinearGradient(0,0,1,0,[{offset:0,color:'#c9a84c'},{offset:1,color:'#3b5e7a'}])},barWidth:'55%',label:{show:true,position:'right',color:'#c9cdd4',fontSize:12,fontWeight:700}}],
   });
+}
+
+async function drillDown(code){
+  const mk='link_prov_'+code;
+  try{
+    if(!geoCache[mk]){const r=await fetch(`/api/geojson?code=${code}0000`);if(!r.ok)throw new Error('HTTP '+r.status);geoCache[mk]=await r.json()}
+    echarts.registerMap(mk,geoCache[mk]);
+    drillCode.value=code;
+    const provName = nationalGeo?.features.find(f=>String(f.id).substring(0,2)===code);
+    drillProv.value = provName?.properties?.name || '';
+    if(mapInst)mapInst.dispose();
+    const el=mapDom.value;if(!el)return;
+    const mx=Math.max(...cities.value.map(p=>p.value),1);
+    const gSet=new Set(geoCache[mk].features.map(f=>f.properties.name));
+    const m=n=>gSet.has(n)?n:gSet.has(n+'市')?n+'市':gSet.has(n+'区')?n+'区':gSet.has(n+'县')?n+'县':n;
+    mapInst=echarts.init(el);
+    mapInst.setOption({
+      backgroundColor:'transparent',
+      tooltip:{trigger:'item',backgroundColor:'rgba(8,10,15,0.95)',borderColor:'#d4a853',textStyle:{color:'#8B6914',fontSize:14},formatter:p=>`<strong style="color:#8B6914;">${p.name}</strong><br/>访问：<span style="color:#8B6914;font-size:18px;font-weight:700">${p.value||0}</span> 次`},
+      visualMap:{min:0,max:mx,left:10,bottom:20,text:['高','低'],calculable:true,textStyle:{color:'#c9cdd4',fontSize:13},inRange:{color:['#101520','#3b5e7a','#8B7355','#c9a84c','#e6a23c']}},
+      geo:{map:mk,zoom:2.5,roam:true,label:{show:false},emphasis:{label:{color:'#8B6914',fontSize:12,fontWeight:'bold',show:true},itemStyle:{areaColor:'#f5e6c8'}},itemStyle:{areaColor:'#0d1117',borderColor:'#2a3345',borderWidth:0.8}},
+      series:[{name:'访问',type:'map',map:mk,geoIndex:0,data:cities.value.map(p=>({name:m(p.name),value:p.value}))}],
+    });
+  }catch(e){console.warn(e)}
+}
+
+function backUp(){
+  drillCode.value='';drillProv.value='';drawCharts()
 }
 
 function drawPies(){
