@@ -199,6 +199,16 @@ async function drillDown(code, level){
       geo:{map:mk,zoom,roam:true,label:{show:false},emphasis:{label:{color:'#8B6914',fontSize:12,fontWeight:'bold',show:true},itemStyle:{areaColor:'#f5e6c8'}},itemStyle:{areaColor:'#0d1117',borderColor:'#2a3345',borderWidth:0.8}},
       series:[{name:'访问',type:'map',map:mk,geoIndex:0,data:cities.value.map(p=>({name:m(p.name),value:p.value}))}],
     });
+    // 重新绑定点击（市级不再下钻，省级可继续）
+    if (level === 'prov') {
+      mapInst.off('click');
+      mapInst.on('click', ev => {
+        if (!ev.name) return;
+        const sn = ev.name.replace(/市$/, '');
+        const f = nationalGeo?.features.find(fe => fe.properties.name === ev.name || fe.properties.name === sn);
+        if (f?.id) drillDown(String(f.id), 'city');
+      });
+    }
   }catch(e){console.warn(e)}
 }
 
