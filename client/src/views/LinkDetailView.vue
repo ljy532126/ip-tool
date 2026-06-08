@@ -78,6 +78,7 @@ const records = ref([]);
 const page = ref(1), totalPages = ref(1);
 const mapDom = ref(null), barDom = ref(null);
 const drillCode = ref(''), drillProv = ref('');
+const PM={'11000000':'北京市','12000000':'天津市','13000000':'河北省','14000000':'山西省','15000000':'内蒙古','21000000':'辽宁省','22000000':'吉林省','23000000':'黑龙江省','31000000':'上海市','32000000':'江苏省','33000000':'浙江省','34000000':'安徽省','35000000':'福建省','36000000':'江西省','37000000':'山东省','41000000':'河南省','42000000':'湖北省','43000000':'湖南省','44000000':'广东省','45000000':'广西','46000000':'海南省','50000000':'重庆市','51000000':'四川省','52000000':'贵州省','53000000':'云南省','54000000':'西藏','61000000':'陕西省','62000000':'甘肃省','63000000':'青海省','64000000':'宁夏','65000000':'新疆','71000000':'台湾','81000000':'香港','82000000':'澳门'};
 let mapInst = null, barInst = null, nationalGeo = null, geoCache = {};
 const chartInstances = [];
 
@@ -175,16 +176,16 @@ function drawCharts(){
 async function drillDown(code, level){
   let url, mk, zoom;
   if (level === 'prov') {
-    url = `/api/geojson?code=${code}0000`; mk = 'link_prov_' + code; zoom = 2.5;
+    url = `/api/geojson?code=${code}0000`; mk = 'lp_' + code; zoom = 2.5;
   } else {
-    url = `/api/geojson?code=${code}`; mk = 'link_city_' + code; zoom = 4;
+    url = `/api/geojson?code=${code}`; mk = 'lc_' + code; zoom = 4;
   }
   try{
     if(!geoCache[mk]){const r=await fetch(url);if(!r.ok)throw new Error('HTTP '+r.status);geoCache[mk]=await r.json()}
     echarts.registerMap(mk,geoCache[mk]);
     drillCode.value=code;
-    const name = geoCache[mk].features[0]?.properties?.name || code;
-    drillProv.value=name;
+    const provName=level==='prov'?(PM[code+'000000']||code):(geoCache[mk].features[0]?.properties?.name||code);
+    drillProv.value=provName;
     if(mapInst)mapInst.dispose();
     const el=mapDom.value;if(!el)return;
     const mx=Math.max(...cities.value.map(p=>p.value),1);
