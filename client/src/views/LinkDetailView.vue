@@ -20,7 +20,7 @@
     <div class="card" style="margin-bottom:18px">
       <div class="card-title">城市热力分布
         <span v-if="drillProv" style="color:var(--accent);font-weight:400"> — {{ drillProv }}</span>
-        <button v-if="drillCode" class="btn btn-outline btn-sm" style="margin-left:12px" @click="backUp">返回全国</button>
+        <button v-if="drillCode" class="btn btn-outline btn-sm" style="margin-left:12px" @click="backUp">{{ drillCode.length >= 4 ? '返回省份' : '返回全国' }}</button>
       </div>
       <div ref="mapDom" class="map-box"></div>
     </div>
@@ -141,11 +141,24 @@ function drawCharts(){
 
   // 点击下钻
   mapInst.off('click');
+  const curGeoFn = () => {
+    if (!drillCode.value) return nationalGeo;
+    const key = drillCode.value.length >= 4 ? 'link_city_' + drillCode.value : 'link_prov_' + drillCode.value;
+    return geoCache[key];
+  };
+  const curLevel = () => !drillCode.value ? 'nation' : drillCode.value.length >= 4 ? 'city' : 'prov';
   mapInst.on('click', p => {
-    if (drillCode.value) return; // already drilled, no further
-    if (!p.name || !nationalGeo) return;
-    const f = nationalGeo.features.find(fe => fe.properties.name === p.name);
-    if (f?.id) drillDown(String(f.id).substring(0, 2));
+    if (!p.name) return;
+    const geo = curGeoFn();
+    if (!geo) return;
+    const f = geo.features.find(fe => fe.properties.name === p.name);
+    if (!f) return;
+    const id = String(f.id || '');
+
+    const lv = curLevel();
+    if (lv === 'nation' && id.length >= 2) drillDown(id.substring(0, 2), 'prov');
+    else if (lv === 'prov' && id.length >= 4) drillDown(id, 'city');
+    // city level: no deeper
   });
 
   const top10=[...cities.value].sort((a,b)=>b.value-a.value).slice(0,10);
@@ -159,14 +172,19 @@ function drawCharts(){
   });
 }
 
-async function drillDown(code){
-  const mk='link_prov_'+code;
+async function drillDown(code, level){
+  let url, mk, zoom;
+  if (level === 'prov') {
+    url = `/api/geojson?code=${code}0000`; mk = 'link_prov_' + code; zoom = 2.5;
+  } else {
+    url = `/api/geojson?code=${code}`; mk = 'link_city_' + code; zoom = 4;
+  }
   try{
-    if(!geoCache[mk]){const r=await fetch(`/api/geojson?code=${code}0000`);if(!r.ok)throw new Error('HTTP '+r.status);geoCache[mk]=await r.json()}
+    if(!geoCache[mk]){const r=await fetch(url);if(!r.ok)throw new Error('HTTP '+r.status);geoCache[mk]=await r.json()}
     echarts.registerMap(mk,geoCache[mk]);
     drillCode.value=code;
-    const provName = nationalGeo?.features.find(f=>String(f.id).substring(0,2)===code);
-    drillProv.value = provName?.properties?.name || '';
+    const name = geoCache[mk].features[0]?.properties?.name || code;
+    drillProv.value=name;
     if(mapInst)mapInst.dispose();
     const el=mapDom.value;if(!el)return;
     const mx=Math.max(...cities.value.map(p=>p.value),1);
@@ -177,14 +195,23 @@ async function drillDown(code){
       backgroundColor:'transparent',
       tooltip:{trigger:'item',backgroundColor:'rgba(8,10,15,0.95)',borderColor:'#d4a853',textStyle:{color:'#8B6914',fontSize:14},formatter:p=>`<strong style="color:#8B6914;">${p.name}</strong><br/>访问：<span style="color:#8B6914;font-size:18px;font-weight:700">${p.value||0}</span> 次`},
       visualMap:{min:0,max:mx,left:10,bottom:20,text:['高','低'],calculable:true,textStyle:{color:'#c9cdd4',fontSize:13},inRange:{color:['#101520','#3b5e7a','#8B7355','#c9a84c','#e6a23c']}},
-      geo:{map:mk,zoom:2.5,roam:true,label:{show:false},emphasis:{label:{color:'#8B6914',fontSize:12,fontWeight:'bold',show:true},itemStyle:{areaColor:'#f5e6c8'}},itemStyle:{areaColor:'#0d1117',borderColor:'#2a3345',borderWidth:0.8}},
+      geo:{map:mk,zoom,roam:true,label:{show:false},emphasis:{label:{color:'#8B6914',fontSize:12,fontWeight:'bold',show:true},itemStyle:{areaColor:'#f5e6c8'}},itemStyle:{areaColor:'#0d1117',borderColor:'#2a3345',borderWidth:0.8}},
       series:[{name:'访问',type:'map',map:mk,geoIndex:0,data:cities.value.map(p=>({name:m(p.name),value:p.value}))}],
     });
   }catch(e){console.warn(e)}
 }
 
 function backUp(){
-  drillCode.value='';drillProv.value='';drawCharts()
+  if (!drillCode.value) return;
+  if (drillCode.value.length >= 4) {
+    // 从城市区县回省份
+    const prov = drillCode.value.substring(0, 2);
+    drillCode.value = ''; drillProv.value = '';
+    drillDown(prov, 'prov');
+  } else {
+    // 从省份回全国
+    drillCode.value = ''; drillProv.value = ''; drawCharts();
+  }
 }
 
 function drawPies(){
