@@ -140,25 +140,25 @@ function drawCharts(){
   });
 
   // 点击下钻
-  mapInst.off('click');
-  const curGeoFn = () => {
-    if (!drillCode.value) return nationalGeo;
-    const key = drillCode.value.length >= 4 ? 'link_city_' + drillCode.value : 'link_prov_' + drillCode.value;
-    return geoCache[key];
-  };
   const curLevel = () => !drillCode.value ? 'nation' : drillCode.value.length >= 4 ? 'city' : 'prov';
+  mapInst.off('click');
   mapInst.on('click', p => {
     if (!p.name) return;
-    const geo = curGeoFn();
-    if (!geo) return;
-    const f = geo.features.find(fe => fe.properties.name === p.name);
-    if (!f) return;
-    const id = String(f.id || '');
-
     const lv = curLevel();
-    if (lv === 'nation' && id.length >= 2) drillDown(id.substring(0, 2), 'prov');
-    else if (lv === 'prov' && id.length >= 4) drillDown(id, 'city');
-    // city level: no deeper
+
+    if (lv === 'nation') {
+      // 全国 → 省：从 nationalGeo 找城市 id
+      const f = nationalGeo?.features.find(fe => fe.properties.name === p.name);
+      if (f?.id) drillDown(String(f.id).substring(0, 2), 'prov');
+    } else if (lv === 'prov') {
+      // 省 → 市/区县：从 nationalGeo 按名称反查 adcode
+      const sn = p.name.replace(/市$/, '');
+      const f = nationalGeo?.features.find(fe =>
+        fe.properties.name === p.name || fe.properties.name === sn
+      );
+      if (f?.id) drillDown(String(f.id), 'city');
+    }
+    // city 级不再下钻
   });
 
   const top10=[...cities.value].sort((a,b)=>b.value-a.value).slice(0,10);
