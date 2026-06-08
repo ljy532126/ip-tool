@@ -1,5 +1,6 @@
 const axios = require('axios');
 const Setting = require('../models/setting.model');
+const User = require('../models/user.model');
 
 const IP_API = 'https://uapis.cn/api/v1/network/ipinfo';
 const PRIVATE_IP_RE = /^(10\.|172\.(1[6-9]|2\d|3[01])\.|192\.168\.|127\.|0\.|::1|localhost)/i;
@@ -9,7 +10,8 @@ const ipGeoCache = new Map();
 let cachedApiKey = null;
 let cacheTime = 0;
 
-// 从数据库读取 API Key（缓存 60 秒避免每次查询都读库）
+const userKeyCache = new Map();
+
 async function getApiKey() {
   const now = Date.now();
   if (cachedApiKey !== null && now - cacheTime < 60000) return cachedApiKey;
@@ -23,12 +25,28 @@ async function getApiKey() {
   }
 }
 
+async function getUserApiKey(userId) {
+  if (!userId) return '';
+  const now = Date.now();
+  const entry = userKeyCache.get(userId);
+  if (entry && now - entry.time < 60000) return entry.key;
+  try {
+    const user = await User.findById(userId, 'apiKey apiKeyFree').lean();
+    const key = user?.apiKey?.trim() || user?.apiKeyFree?.trim() || '';
+    userKeyCache.set(userId, { key, time: now });
+    return key;
+  } catch {
+    return '';
+  }
+}
+
 /**
  * 查询 IP 的地理位置信息，结果自动缓存
  * @param {string} ip - 客户端 IP
+ * @param {string} userId - 链接所属用户 ID，优先使用该用户的 API Key
  * @returns {Promise<object|null>} geoInfo 对象，内网/失败返回 null
  */
-async function lookupIP(ip) {
+async function lookupIP(ip, userId) {
   if (!ip || PRIVATE_IP_RE.test(ip)) {
     ipGeoCache.set(ip, null);
     return null;
@@ -37,7 +55,13 @@ async function lookupIP(ip) {
   if (ipGeoCache.has(ip)) return ipGeoCache.get(ip);
 
   try {
-    const apiKey = await getApiKey();
+    let apiKey = '';
+    if (userId) {
+      apiKey = await getUserApiKey(userId);
+    }
+    if (!apiKey) {
+      apiKey = await getApiKey();
+    }
     const headers = {};
     if (apiKey) headers['Authorization'] = `Bearer ${apiKey}`;
 

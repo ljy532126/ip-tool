@@ -20,7 +20,7 @@ const routes = [
   { path: '/links/:id', component: LinkDetailView, meta: { auth: true } },
   { path: '/analytics', component: AnalyticsView, meta: { auth: true } },
   { path: '/admin', component: AdminView, meta: { auth: true, admin: true } },
-  { path: '/settings', component: SettingsView, meta: { auth: true, admin: true } },
+  { path: '/settings', component: SettingsView, meta: { auth: true } },
 ];
 
 const router = createRouter({ history: createWebHashHistory(), routes });

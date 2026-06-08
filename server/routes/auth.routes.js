@@ -1,7 +1,8 @@
 const express = require('express');
 const router = express.Router();
+const axios = require('axios');
 const User = require('../models/user.model');
-const { signToken } = require('../middleware/auth');
+const { signToken, authMiddleware } = require('../middleware/auth');
 
 /**
  * POST /api/v1/auth/register
@@ -84,6 +85,84 @@ router.post('/login', async (req, res) => {
     });
   } catch (e) {
     res.status(500).json({ code: 500, message: '登录失败，请重试' });
+  }
+});
+
+/**
+ * GET /api/v1/auth/settings
+ * 获取当前用户的 API Key 设置
+ */
+router.get('/settings', authMiddleware, async (req, res) => {
+  try {
+    const user = await User.findById(req.user.userId, 'apiKey apiKeyFree').lean();
+    if (!user) return res.status(404).json({ code: 404, message: '用户不存在' });
+    res.json({
+      code: 0,
+      data: { uapisApiKey: user.apiKey || '', uapisApiKeyFree: user.apiKeyFree || '' },
+    });
+  } catch (e) {
+    res.status(500).json({ code: 500, message: '查询失败' });
+  }
+});
+
+/**
+ * PUT /api/v1/auth/settings
+ * 更新当前用户的 API Key 设置
+ */
+router.put('/settings', authMiddleware, async (req, res) => {
+  try {
+    const { uapisApiKey, uapisApiKeyFree } = req.body;
+    const update = {};
+    if (uapisApiKey !== undefined) update.apiKey = uapisApiKey.trim();
+    if (uapisApiKeyFree !== undefined) update.apiKeyFree = uapisApiKeyFree.trim();
+    await User.findByIdAndUpdate(req.user.userId, update);
+    res.json({ code: 0, message: '保存成功' });
+  } catch (e) {
+    res.status(500).json({ code: 500, message: '保存失败' });
+  }
+});
+
+/**
+ * POST /api/v1/auth/test-api
+ * 测试 uapis API 连通性
+ */
+router.post('/test-api', authMiddleware, async (req, res) => {
+  const { key } = req.body;
+  if (!key) return res.status(400).json({ code: 400, message: '请输入 API Key' });
+
+  try {
+    const headers = { Authorization: `Bearer ${key}` };
+    const start = Date.now();
+    const resp = await axios.get('https://uapis.cn/api/v1/network/ipinfo', {
+      params: { ip: 'cn.bing.com', source: 'commercial' },
+      headers,
+      timeout: 8000,
+    });
+    const elapsed = Date.now() - start;
+
+    if (resp.data && resp.data.ip) {
+      res.json({
+        code: 0,
+        message: '连接成功',
+        data: {
+          elapsed: elapsed + 'ms',
+          sample: {
+            ip: resp.data.ip,
+            region: resp.data.region,
+            city: resp.data.city,
+            isp: resp.data.isp || resp.data.llc,
+          },
+        },
+      });
+    } else {
+      res.json({ code: 0, message: '连接成功，但返回数据为空', data: { elapsed: elapsed + 'ms' } });
+    }
+  } catch (e) {
+    if (e.response?.status === 401 || e.response?.status === 403) {
+      res.json({ code: 401, message: 'API Key 无效或未授权' });
+    } else {
+      res.json({ code: 500, message: '连接失败: ' + (e.message || '网络错误') });
+    }
   }
 });
 

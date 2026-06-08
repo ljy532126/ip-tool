@@ -5,3 +5,4 @@ visits.json
 *.log
 Dockerfile
 .dockerignore
+map-drilldown-extract/

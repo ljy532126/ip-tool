@@ -6,7 +6,7 @@
       <router-link class="nav-link" to="/links">链接</router-link>
       <router-link class="nav-link" to="/analytics">分析</router-link>
       <router-link v-if="store.isAdmin" class="nav-link" to="/admin">管理</router-link>
-      <router-link v-if="store.isAdmin" class="nav-link" to="/settings">设置</router-link>
+      <router-link class="nav-link" to="/settings">设置</router-link>
       <router-link class="nav-link" to="/docs">API</router-link>
       <div class="nav-right">
         <span class="nav-role" :class="store.user?.role">{{ store.user?.role }}</span>

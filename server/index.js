@@ -71,7 +71,7 @@ app.get('/r/:key', async (req, res) => {
 
     const ip = getRealIP(req);
     const ua = req.headers['user-agent'] || '';
-    const geoInfo = await lookupIP(ip);
+    const geoInfo = await lookupIP(ip, link.userId);
 
     // 记录访问
     await VisitLog.create({

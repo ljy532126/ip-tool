@@ -1,11 +1,11 @@
 <template>
   <div>
-    <div class="section-head"><h2>系统设置</h2></div>
+    <div class="section-head"><h2>API 设置</h2></div>
 
     <div class="card">
       <div class="card-title">uapis.cn API 配置</div>
       <p style="color:var(--muted);font-size:13px;margin-bottom:16px">
-        用于 IP 归属地查询。免费额度无需 Key，商业版填入 Key 获得更完整数据。
+        每个用户独立设置自己的 API Key，用于你的链接 IP 归属地查询。不填则使用系统默认 Key。
       </p>
 
       <div class="field">
@@ -55,7 +55,7 @@ const testResult = ref(null);
 
 async function load() {
   try {
-    const res = await api.get('/api/v1/admin/settings');
+    const res = await api.get('/api/v1/auth/settings');
     apiKey.value = res.data.uapisApiKey || '';
     apiKeyFree.value = res.data.uapisApiKeyFree || '';
   } catch {}
@@ -64,7 +64,7 @@ async function load() {
 async function save() {
   saving.value = true;
   try {
-    await api.put('/api/v1/admin/settings', {
+    await api.put('/api/v1/auth/settings', {
       uapisApiKey: apiKey.value,
       uapisApiKeyFree: apiKeyFree.value,
     });
@@ -83,7 +83,7 @@ async function testKey() {
   testing.value = true;
   testResult.value = null;
   try {
-    const res = await api.post('/api/v1/admin/test-api', { key });
+    const res = await api.post('/api/v1/auth/test-api', { key });
     testResult.value = {
       ok: true,
       elapsed: res.data.elapsed,

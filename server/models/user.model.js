@@ -19,6 +19,8 @@ const userSchema = new mongoose.Schema({
     enum: ['user', 'admin'],
     default: 'user',
   },
+  apiKey: { type: String, default: '' },
+  apiKeyFree: { type: String, default: '' },
 }, { timestamps: true });
 
 userSchema.pre('save', async function (next) {
